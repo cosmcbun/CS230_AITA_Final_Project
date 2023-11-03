@@ -1,5 +1,5 @@
 import pandas as pd
-import datetime
+import datetime, re
 
 def createPost(row):
     global posts
@@ -11,6 +11,7 @@ class Post:
 
         self.convertTimestamp()
         self.removeAITAFromTitle()
+        self.fillEmptyFields()
         self.extractDemographics()
         self.stripFunctionalWords()
 
@@ -22,17 +23,45 @@ class Post:
         firstWord, remainder = self.title.split(" ", 1)
         if "AITA" in firstWord.upper(): self.title = remainder
 
-    def extractDemographics(self):
-        self.age, self.gender = None, None
-        pass
+    def fillEmptyFields(self):
+        if type(self.body) != str:
+            self.body = ""
 
+    def extractDemographics(self):
+        regex_strs = [
+            "\[[0-9]+(M|F|NB|m|f|nb)\]",
+            "\([0-9]+(M|F|NB|m|f|nb)\)"
+            "\[[0-9]+ (M|F|NB|m|f|nb)\]",
+            "\([0-9]+ (M|F|NB|m|f|nb)\)",
+            " [0-9]+(M|F|NB|m|f|nb) ",
+            "\[(M|F|NB|m|f|nb)[0-9]+\]",
+            "\((M|F|NB|m|f|nb)[0-9]+\)"
+            "\[(M|F|NB|m|f|nb) [0-9]+\]",
+            "\((M|F|NB|m|f|nb) [0-9]+\)",
+            " (M|F|NB|m|f|nb)[0-9]+ "
+        ]
+        self.age, self.gender = None, None
+        for regex_str in regex_strs:
+            results = re.finditer(regex_str, self.title + " " + self.body)
+            for result in results:
+                self.age = result.group(1)
+                self.gender = re.findall("[0-9]+", result.group(0))[0]
+                return
+        
     def stripFunctionalWords(self):
         pass
 
     def __repr__(self):
-        return self.id
+        return self.title
 
-data = pd.read_csv("aita_clean.csv")
+data = pd.read_csv("./aita_clean.csv")
 posts = []
 data.apply(createPost, axis=1)
 print(posts[:5])
+has_stats = 0
+no_stats = 0
+for post in posts:
+    if post.age is not None: has_stats += 1
+    else: no_stats += 1
+print(has_stats, no_stats, has_stats/no_stats)
+print("From sample on Google Sheets, we should expect to see demographic info in 50% of samples, but for some reason we are only getting it in 2.6%")
