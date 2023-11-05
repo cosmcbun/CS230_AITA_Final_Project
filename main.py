@@ -1,5 +1,12 @@
 import pandas as pd
 import datetime, re
+import nltk
+import warnings
+
+warnings.filterwarnings(action='ignore')
+
+import gensim
+from gensim.models import Word2Vec
 
 def createPost(row):
     global posts
@@ -14,6 +21,8 @@ class Post:
         self.fillEmptyFields()
         self.extractDemographics()
         self.stripFunctionalWords()
+        self.cleanBody()
+        self.tokenize()
 
     def convertTimestamp(self):
         self.time = datetime.datetime.fromtimestamp(self.timestamp)
@@ -51,17 +60,47 @@ class Post:
     def stripFunctionalWords(self):
         pass
 
+    def cleanBody(self):
+        self.body = self.body.lower().replace("\n"," ")
+
+    def tokenize(self):
+        #wnl = nltk.stem.WordNetLemmatizer()
+        #tokens = nltk.tokenize.word_tokenize(self.body)
+        #for t in tokens:
+        #    print(wnl.lemmatize(t, pos="v"))
+        pass
+
     def __repr__(self):
         return self.title
+
+def concatAllPosts(posts):
+    return "".join([p.body for p in posts])
+
+def trainWord2Vec(posts):
+    data = []
+    for i in nltk.tokenize.sent_tokenize(concatAllPosts(posts)):
+        temp = []
+        for j in nltk.tokenize.word_tokenize(i):
+            temp.append(j)
+        data.append(temp)
+    print(data[6:10])
+
+    model = gensim.models.Word2Vec(data, min_count=1, vector_size=100, window=5, sg=1)
+    print("Cosine similarity between 'h' " +
+          "and 'w' - Skip Gram : ",
+          model.wv.similarity('lose', 'lifestyle'))
+    print("Cosine similarity between 'h' " +
+          "and 'p' - Skip Gram : ",
+          model.wv.similarity('the', 'a'))
+    print(model.wv)
+    return model
+
 
 data = pd.read_csv("./aita_clean.csv")
 posts = []
 data.apply(createPost, axis=1)
-print(posts[:5])
-has_stats = 0
-no_stats = 0
-for post in posts:
-    if post.age is not None: has_stats += 1
-    else: no_stats += 1
-print(has_stats, no_stats, has_stats/no_stats)
-print("From sample on Google Sheets, we should expect to see demographic info in 50% of samples, but for some reason we are only getting it in 2.6%")
+print("Post compilation complete")
+
+
+
+model = trainWord2Vec(posts[:10])
