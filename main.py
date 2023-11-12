@@ -2,6 +2,8 @@ import pandas as pd
 import datetime, re
 import nltk
 import warnings
+import pickle
+import os
 
 warnings.filterwarnings(action='ignore')
 
@@ -77,30 +79,44 @@ def concatAllPosts(posts):
     return "".join([p.body for p in posts])
 
 def trainWord2Vec(posts):
-    data = []
+    tokenized_data = []
     for i in nltk.tokenize.sent_tokenize(concatAllPosts(posts)):
         temp = []
         for j in nltk.tokenize.word_tokenize(i):
             temp.append(j)
-        data.append(temp)
-    print(data[6:10])
+        tokenized_data.append(temp)
 
-    model = gensim.models.Word2Vec(data, min_count=1, vector_size=100, window=5, sg=1)
-    print("Cosine similarity between 'h' " +
-          "and 'w' - Skip Gram : ",
-          model.wv.similarity('lose', 'lifestyle'))
-    print("Cosine similarity between 'h' " +
-          "and 'p' - Skip Gram : ",
-          model.wv.similarity('the', 'a'))
-    print(model.wv)
+    model = gensim.models.Word2Vec(tokenized_data, min_count=1, vector_size=100, window=5, sg=1)
     return model
 
+start_time = datetime.datetime.now()
+if os.path.isfile("posts.pickle"):
+    posts = pickle.load(open("posts.pickle", "rb"))
+    print("Post loading complete")
+else:
+    data = pd.read_csv("./aita_clean.csv")
+    posts = []
+    data.apply(createPost, axis=1)
+    print("Post compilation complete")
+    pickle.dump(posts, open("posts.pickle", "wb"))
 
-data = pd.read_csv("./aita_clean.csv")
-posts = []
-data.apply(createPost, axis=1)
-print("Post compilation complete")
+print(datetime.datetime.now()-start_time)
+print(len(posts))
 
+if os.path.isfile("model.pickle"):
+    model = pickle.load(open("model.pickle", "rb"))
+    print("Model loading complete")
+else:
+    model = trainWord2Vec(posts)
+    print("Model compilation complete")
+    pickle.dump(model, open("model.pickle", "wb"))
 
+print(datetime.datetime.now()-start_time)
 
-model = trainWord2Vec(posts[:10])
+print("Cosine similarity between 'h' " +
+      "and 'w' - Skip Gram : ",
+      model.wv.similarity('lose', 'lifestyle'))
+print("Cosine similarity between 'h' " +
+      "and 'p' - Skip Gram : ",
+      model.wv.similarity('the', 'a'))
+print(model.wv)
