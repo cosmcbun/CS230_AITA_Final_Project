@@ -1,3 +1,5 @@
+from tensorflow import keras
+from tensorflow.keras.layers import Dense
 import pandas as pd
 import numpy as np
 import datetime, re
@@ -6,6 +8,8 @@ import warnings
 import pickle
 import os
 import random
+
+VECTOR_SIZE = 100
 
 warnings.filterwarnings(action='ignore')
 
@@ -87,17 +91,14 @@ def trainWord2Vec(posts):
             temp.append(j)
         tokenized_data.append(temp)
 
-    model = gensim.models.Word2Vec(tokenized_data, min_count=1, vector_size=100, window=5, sg=1)
+    model = gensim.models.Word2Vec(tokenized_data, min_count=1, vector_size=VECTOR_SIZE, window=5, sg=1)
     return model
 
 def getAverageTokenVector(post, model):
     tokens = nltk.tokenize.word_tokenize(post.body)
     # tokens = ["my", "girlfriend", "hates", "me"]#nltk.tokenize.word_tokenize(post.body)
-    vectors = np.asarray([model.wv[word] for word in tokens])
+    vectors = np.asarray([(model.wv[word] if word in model.wv else np.zeros(VECTOR_SIZE)) for word in tokens])
     return np.mean(vectors, axis=0)
-
-    # avg vectors
-    # return avg vector
 
 start_time = datetime.datetime.now()
 if os.path.isfile("posts.pickle"):
@@ -111,13 +112,11 @@ else:
     random.shuffle(all_posts)
     print("Post compilation complete")
     pickle.dump(all_posts, open("posts.pickle", "wb"))
+    print(datetime.datetime.now()-start_time)
 training_set = all_posts[:80000]
 validation_set = all_posts[80000:90000]
 testing_set = all_posts[90000:]
-print([len(s) for s in [training_set,validation_set,testing_set]])
 
-print(datetime.datetime.now()-start_time)
-print(len(all_posts))
 
 if os.path.isfile("model.pickle"):
     model = pickle.load(open("model.pickle", "rb"))
@@ -126,23 +125,44 @@ else:
     model = trainWord2Vec(training_set)
     print("Model compilation complete")
     pickle.dump(model, open("model.pickle", "wb"))
+    print(datetime.datetime.now()-start_time)
 
-print(datetime.datetime.now()-start_time)
 
-print("Cosine similarity between 'h' " +
-      "and 'w' - Skip Gram : ",
-      model.wv.similarity('happy', 'glad'))
-print("Cosine similarity between 'h' " +
-      "and 'w' - Skip Gram : ",
-      model.wv.similarity('girlfriend', 'wife'))
-print("Cosine similarity between 'h' " +
-      "and 'p' - Skip Gram : ",
-      model.wv.similarity('the', 'a'))
+def create_neural_network():
+  model = keras.Sequential()
+  model.add(keras.Input(shape=(VECTOR_SIZE)))
 
-all_posts[41].body= "wife"
-a = getAverageTokenVector(all_posts[41], model)
-all_posts[41].body= "a"
-b = getAverageTokenVector(all_posts[41], model)
-print(sum([abs(n) for n in a]))
-print(sum([abs(n) for n in b]))
-print(a-b)
+  # three dense layers
+  model.add(Dense(128, name = "layer1", activation="relu"))
+  model.add(Dense(128, name = "layer2", activation="relu"))
+  model.add(Dense(128, name = "layer3", activation="relu"))
+
+  # add the output layer
+  model.add(Dense(1, name = "output_layer", activation="sigmoid"))
+
+  # let's set up the optimizer!
+  model.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics=['accuracy'])
+
+  return model
+
+def posts_to_dataset(posts, model):
+    inputs = np.ndarray((len(posts), VECTOR_SIZE))
+    for i, post in enumerate(posts):
+        inputs[i] = getAverageTokenVector(post, model)
+    # inputs = np.array([getAverageTokenVector(post, model) for post in posts])
+    outputs = np.array([post.is_asshole for post in posts])
+    return inputs, outputs
+
+neural_net = create_neural_network()
+print("created neural network!")
+train_ds = posts_to_dataset(training_set, model)
+validation_ds = posts_to_dataset(validation_set, model)
+test_ds = posts_to_dataset(testing_set, model)
+
+print("We got the sets!")
+
+history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=50, validation_split = 0.1)
+print(history_basic_model.history)
+# results = neural_net.evaluate(test_ds[0], test_ds[1])
+# print(len(results))
+# print("Test Loss:", results[0], "Test Accuracy:", results[1])
