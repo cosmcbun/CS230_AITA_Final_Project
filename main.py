@@ -1,5 +1,6 @@
 from tensorflow import keras
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.losses import BinaryCrossentropy
 import pandas as pd
 import numpy as np
 import datetime, re
@@ -95,7 +96,7 @@ def trainWord2Vec(posts):
     return model
 
 def getAverageTokenVector(post, model):
-    tokens = nltk.tokenize.word_tokenize(post.body)
+    tokens = post.tokens
     # tokens = ["my", "girlfriend", "hates", "me"]#nltk.tokenize.word_tokenize(post.body)
     vectors = np.asarray([(model.wv[word] if word in model.wv else np.zeros(VECTOR_SIZE)) for word in tokens])
     return np.mean(vectors, axis=0)
@@ -113,6 +114,11 @@ else:
     print("Post compilation complete")
     pickle.dump(all_posts, open("posts.pickle", "wb"))
     print(datetime.datetime.now()-start_time)
+
+for i in range(len(all_posts) - 1, -1, -1):
+    if len(all_posts[i].tokens) < 10:
+        all_posts.pop(i)
+
 training_set = all_posts[:80000]
 validation_set = all_posts[80000:90000]
 testing_set = all_posts[90000:]
@@ -141,7 +147,7 @@ def create_neural_network():
   model.add(Dense(1, name = "output_layer", activation="sigmoid"))
 
   # let's set up the optimizer!
-  model.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics=['accuracy'])
+  model.compile(optimizer = 'adam', loss = BinaryCrossentropy(), metrics=['accuracy'])
 
   return model
 
@@ -161,7 +167,7 @@ test_ds = posts_to_dataset(testing_set, model)
 
 print("We got the sets!")
 
-history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=50, validation_split = 0.1)
+history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=50, validation_data = validation_ds)
 print(history_basic_model.history)
 # results = neural_net.evaluate(test_ds[0], test_ds[1])
 # print(len(results))
