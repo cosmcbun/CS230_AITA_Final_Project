@@ -19,7 +19,8 @@ from gensim.models import Word2Vec
 
 def createPost(row):
     global all_posts
-    all_posts.append(Post(row))
+    post = Post(row)
+    if post.body: all_posts.append(post)
 
 class Post:
     def __init__(self, row):
@@ -133,42 +134,18 @@ else:
     pickle.dump(model, open("model.pickle", "wb"))
     print(datetime.datetime.now()-start_time)
 
+def word_to_magnitude(word):
+    return np.linalg.norm(model.wv[word])
 
-def create_neural_network():
-  model = keras.Sequential()
-  model.add(keras.Input(shape=(VECTOR_SIZE)))
+def get_highest_magnitude_words():
+    words = model.wv.index_to_key
+    words = sorted(words, key=word_to_magnitude, reverse=True)
+    return words[0:100]
 
-  # three dense layers
-  model.add(Dense(128, name = "layer1", activation="relu"))
-  model.add(Dense(128, name = "layer2", activation="relu"))
-  model.add(Dense(128, name = "layer3", activation="relu"))
+# Highest magnitude
+# Selected by us
+# Difference in frequency
+# Highest impacts words of certain frequency
 
-  # add the output layer
-  model.add(Dense(1, name = "output_layer", activation="sigmoid"))
-
-  # let's set up the optimizer!
-  model.compile(optimizer = 'adam', loss = BinaryCrossentropy(), metrics=['accuracy'])
-
-  return model
-
-def posts_to_dataset(posts, model):
-    inputs = np.ndarray((len(posts), VECTOR_SIZE))
-    for i, post in enumerate(posts):
-        inputs[i] = getAverageTokenVector(post, model)
-    # inputs = np.array([getAverageTokenVector(post, model) for post in posts])
-    outputs = np.array([post.is_asshole for post in posts])
-    return inputs, outputs
-
-neural_net = create_neural_network()
-print("created neural network!")
-train_ds = posts_to_dataset(training_set, model)
-validation_ds = posts_to_dataset(validation_set, model)
-test_ds = posts_to_dataset(testing_set, model)
-
-print("We got the sets!")
-
-history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=50, validation_data = validation_ds)
-print(history_basic_model.history)
-# results = neural_net.evaluate(test_ds[0], test_ds[1])
-# print(len(results))
-# print("Test Loss:", results[0], "Test Accuracy:", results[1])
+# Remove stopwords & uncommon words (remove links)
+# Naive-bayes
