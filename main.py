@@ -19,7 +19,8 @@ from gensim.models import Word2Vec
 
 def createPost(row):
     global all_posts
-    all_posts.append(Post(row))
+    post = Post(row)
+    if post.body: all_posts.append(post)
 
 class Post:
     def __init__(self, row):
@@ -141,7 +142,6 @@ def create_neural_network():
   # three dense layers
   model.add(Dense(128, name = "layer1", activation="relu"))
   model.add(Dense(128, name = "layer2", activation="relu"))
-  model.add(Dense(128, name = "layer3", activation="relu"))
 
   # add the output layer
   model.add(Dense(1, name = "output_layer", activation="sigmoid"))
@@ -167,7 +167,7 @@ test_ds = posts_to_dataset(testing_set, model)
 
 print("We got the sets!")
 
-history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=50, validation_data = validation_ds)
+history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=25, validation_data = validation_ds)
 print(history_basic_model.history)
 # results = neural_net.evaluate(test_ds[0], test_ds[1])
 # print(len(results))
