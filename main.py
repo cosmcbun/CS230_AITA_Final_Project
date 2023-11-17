@@ -1,6 +1,6 @@
-#from tensorflow import keras
-#from tensorflow.keras.layers import Dense
-#from tensorflow.keras.losses import BinaryCrossentropy
+from tensorflow import keras
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.losses import BinaryCrossentropy
 import pandas as pd
 import numpy as np
 import datetime, re
@@ -154,7 +154,7 @@ def getWord2Vec(word_set):
         return model
 
 #dylan you have to run this once
-#nltk.download('stopwords')
+nltk.download('stopwords')
 
 VECTOR_SIZE = 100
 
