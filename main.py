@@ -138,37 +138,13 @@ def create_neural_network():
   model = keras.Sequential()
   model.add(keras.Input(shape=(VECTOR_SIZE)))
 
-  # three dense layers
-  model.add(Dense(128, name = "layer1", activation="relu"))
-  model.add(Dense(128, name = "layer2", activation="relu"))
-  model.add(Dense(128, name = "layer3", activation="relu"))
+def get_self_selected_words():
+    #change to lemmatized versions
+    return ["wife", "husband", "boyfriend", "girlfriend", "gay", "straight", "man", "woman", "boy", "girl", "birthday", "party", "nerd", "nerdy", "school", "college", "university", "friend", "love", "hate", "text", "instagram", "facebook", "snapchat", "work", "job", "fired", "divorce", "marry"]
 
-  # add the output layer
-  model.add(Dense(1, name = "output_layer", activation="sigmoid"))
+# do lemmatization for these models
 
-  # let's set up the optimizer!
-  model.compile(optimizer = 'adam', loss = BinaryCrossentropy(), metrics=['accuracy'])
-
-  return model
-
-def posts_to_dataset(posts, model):
-    inputs = np.ndarray((len(posts), VECTOR_SIZE))
-    for i, post in enumerate(posts):
-        inputs[i] = getAverageTokenVector(post, model)
-    # inputs = np.array([getAverageTokenVector(post, model) for post in posts])
-    outputs = np.array([post.is_asshole for post in posts])
-    return inputs, outputs
-
-neural_net = create_neural_network()
-print("created neural network!")
-train_ds = posts_to_dataset(training_set, model)
-validation_ds = posts_to_dataset(validation_set, model)
-test_ds = posts_to_dataset(testing_set, model)
-
-print("We got the sets!")
-
-history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=50, validation_data = validation_ds)
-print(history_basic_model.history)
-# results = neural_net.evaluate(test_ds[0], test_ds[1])
-# print(len(results))
-# print("Test Loss:", results[0], "Test Accuracy:", results[1])
+# Highest magnitude
+# Selected by us
+# Difference in frequency
+# Highest impacts words of certain frequency
