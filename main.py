@@ -20,34 +20,21 @@ from gensim.models import Word2Vec
 
 def addPostObjectToList(row, posts):
     post = Post(row)
-    if post.body: posts.append(post)
+    if post.allText: posts.append(post)
     if len(posts)%10000 == 0: print(f"Post loading {len(posts)/1000}% complete")
 
 class Post:
     def __init__(self, row):
         self.id, self.timestamp, self.title, self.body, self.edited, self.verdict, self.score, self.num_comments, self.is_asshole = row
 
-        self.convertTimestamp()
-        self.removeAITAFromTitle()
-        self.fillEmptyFields()
+        if pd.isnull(self.body): self.allText = self.title.lower()
+        else: self.allText = self.title.lower() + " " + self.body.lower().replace("\n"," ")
+
+        self.time = datetime.datetime.fromtimestamp(self.timestamp)
         self.extractDemographics()
-        self.stripFunctionalWords()
-        self.cleanBody()
 
         self.tokens = []
         self.tokenize()
-
-    def convertTimestamp(self):
-        self.time = datetime.datetime.fromtimestamp(self.timestamp)
-
-    def removeAITAFromTitle(self):
-        if " " not in self.title: return
-        firstWord, remainder = self.title.split(" ", 1)
-        if "AITA" in firstWord.upper(): self.title = remainder
-
-    def fillEmptyFields(self):
-        if type(self.body) != str:
-            self.body = ""
 
     def extractDemographics(self):
         regex_strs = [
@@ -64,34 +51,34 @@ class Post:
         ]
         self.age, self.gender = None, None
         for regex_str in regex_strs:
-            results = re.finditer(regex_str, self.title + " " + self.body)
+            results = re.finditer(regex_str, self.allText)
             for result in results:
                 self.age = result.group(1)
                 self.gender = re.findall("[0-9]+", result.group(0))[0]
                 return
-        
-    def stripFunctionalWords(self):
-        pass
-
-    def cleanBody(self):
-        self.body = self.body.lower().replace("\n"," ")
 
     def tokenize(self):
         stop_words = set(stopwords.words('english'))
         printable = set(string.ascii_letters)
         printable.add("'")
         printable.add(" ")
+        #print([w for w in self.allText.split()])
+        #print([w for w in ''.join(filter(lambda x: x in printable, self.allText)).split(" ")])
+        #print([w for w in nltk.tokenize.word_tokenize(''.join(filter(lambda x: x in printable, self.allText)))])
         lemmatizer = WordNetLemmatizer()
 
-        for word in ''.join(filter(lambda x: x in printable, self.body)).split(" "):
+        for word in ''.join(filter(lambda x: x in printable, self.allText)).split(" "):
             if word and word not in stop_words and "www" not in word:
                 self.tokens.append(lemmatizer.lemmatize(word))
+        #print(self.tokens)
+        #print()
+
 
     def __repr__(self):
         return self.title
 
 def concatAllPosts(posts):
-    return " ".join([p.body for p in posts])
+    return " ".join([p.allText for p in posts])
 
 def trainWord2Vec(posts):
     tokenized_data = []
