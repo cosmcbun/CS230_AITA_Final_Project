@@ -1,49 +1,38 @@
-from tensorflow import keras
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.losses import BinaryCrossentropy
 import pandas as pd
 import numpy as np
 import datetime, re
 import nltk
+import neural_network
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 import warnings
 import pickle
 import os
 import random
-
-VECTOR_SIZE = 100
+import string
 
 warnings.filterwarnings(action='ignore')
 
 import gensim
 from gensim.models import Word2Vec
 
-def createPost(row):
-    global all_posts
-    all_posts.append(Post(row))
+def addPostObjectToList(row, posts):
+    post = Post(row)
+    if post.allText: posts.append(post)
+    if len(posts)%10000 == 0: print(f"Post loading {len(posts)/1000}% complete")
 
 class Post:
     def __init__(self, row):
         self.id, self.timestamp, self.title, self.body, self.edited, self.verdict, self.score, self.num_comments, self.is_asshole = row
 
-        self.convertTimestamp()
-        self.removeAITAFromTitle()
-        self.fillEmptyFields()
-        self.extractDemographics()
-        self.stripFunctionalWords()
-        self.cleanBody()
-        self.tokenize()
+        if pd.isnull(self.body): self.allText = self.title.lower()
+        else: self.allText = self.title.lower() + " " + self.body.lower().replace("\n"," ")
 
-    def convertTimestamp(self):
         self.time = datetime.datetime.fromtimestamp(self.timestamp)
+        self.extractDemographics()
 
-    def removeAITAFromTitle(self):
-        if " " not in self.title: return
-        firstWord, remainder = self.title.split(" ", 1)
-        if "AITA" in firstWord.upper(): self.title = remainder
-
-    def fillEmptyFields(self):
-        if type(self.body) != str:
-            self.body = ""
+        self.tokens = []
+        self.tokenize()
 
     def extractDemographics(self):
         regex_strs = [
@@ -60,29 +49,34 @@ class Post:
         ]
         self.age, self.gender = None, None
         for regex_str in regex_strs:
-            results = re.finditer(regex_str, self.title + " " + self.body)
+            results = re.finditer(regex_str, self.allText)
             for result in results:
                 self.age = result.group(1)
                 self.gender = re.findall("[0-9]+", result.group(0))[0]
                 return
-        
-    def stripFunctionalWords(self):
-        pass
-
-    def cleanBody(self):
-        self.body = self.body.lower().replace("\n"," ")
 
     def tokenize(self):
-        #wnl = nltk.stem.WordNetLemmatizer()
-        self.tokens = nltk.tokenize.word_tokenize(self.body)
-        #for t in tokens:
-        #    print(wnl.lemmatize(t, pos="v"))
+        stop_words = set(stopwords.words('english'))
+        printable = set(string.ascii_letters)
+        printable.add("'")
+        printable.add(" ")
+        #print([w for w in self.allText.split()])
+        #print([w for w in ''.join(filter(lambda x: x in printable, self.allText)).split(" ")])
+        #print([w for w in nltk.tokenize.word_tokenize(''.join(filter(lambda x: x in printable, self.allText)))])
+        lemmatizer = WordNetLemmatizer()
+
+        for word in ''.join(filter(lambda x: x in printable, self.allText)).split(" "):
+            if word and word not in stop_words and "www" not in word:
+                self.tokens.append(lemmatizer.lemmatize(word))
+        #print(self.tokens)
+        #print()
+
 
     def __repr__(self):
         return self.title
 
 def concatAllPosts(posts):
-    return " ".join([p.body for p in posts])
+    return " ".join([p.allText for p in posts])
 
 def trainWord2Vec(posts):
     tokenized_data = []
@@ -92,56 +86,45 @@ def trainWord2Vec(posts):
             temp.append(j)
         tokenized_data.append(temp)
 
-    model = gensim.models.Word2Vec(tokenized_data, min_count=1, vector_size=VECTOR_SIZE, window=5, sg=1)
+    model = gensim.models.Word2Vec(tokenized_data, min_count=1, vector_size=100, window=5, sg=1)
     return model
 
-def getAverageTokenVector(post, model):
-    tokens = post.tokens
-    # tokens = ["my", "girlfriend", "hates", "me"]#nltk.tokenize.word_tokenize(post.body)
-    vectors = np.asarray([(model.wv[word] if word in model.wv else np.zeros(VECTOR_SIZE)) for word in tokens])
-    return np.mean(vectors, axis=0)
+def getAllPosts():
+    if os.path.isfile("posts.pickle"):
+        return pickle.load(open("posts.pickle", "rb"))
+    else:
+        data = pd.read_csv("./aita_clean.csv")
+        all_posts = []
+        data.apply(lambda row: addPostObjectToList(row, all_posts), axis=1)
+        random.seed(42)
+        random.shuffle(all_posts)
+        pickle.dump(all_posts, open("posts.pickle", "wb"))
+        return all_posts
+
+def getWord2Vec(word_set):
+    if os.path.isfile("model.pickle"):
+        return pickle.load(open("model.pickle", "rb"))
+    else:
+        model = trainWord2Vec(word_set)
+        pickle.dump(model, open("model.pickle", "wb"))
+        return model
+
+VECTOR_SIZE = 100
 
 start_time = datetime.datetime.now()
-if os.path.isfile("posts.pickle"):
-    all_posts = pickle.load(open("posts.pickle", "rb"))
-    print("Post loading complete")
-else:
-    data = pd.read_csv("./aita_clean.csv")
-    all_posts = []
-    data.apply(createPost, axis=1)
-    random.seed(42)
-    random.shuffle(all_posts)
-    print("Post compilation complete")
-    pickle.dump(all_posts, open("posts.pickle", "wb"))
-    print(datetime.datetime.now()-start_time)
-
-for i in range(len(all_posts) - 1, -1, -1):
-    if len(all_posts[i].tokens) < 10:
-        all_posts.pop(i)
-
+all_posts = getAllPosts()
 training_set = all_posts[:80000]
 validation_set = all_posts[80000:90000]
 testing_set = all_posts[90000:]
+print("Post compilation complete")
+print(datetime.datetime.now()-start_time)
 
+word2Vec = getWord2Vec(training_set)
+print("Model compilation complete")
+print(datetime.datetime.now() - start_time)
 
-if os.path.isfile("model.pickle"):
-    model = pickle.load(open("model.pickle", "rb"))
-    print("Model loading complete")
-else:
-    model = trainWord2Vec(training_set)
-    print("Model compilation complete")
-    pickle.dump(model, open("model.pickle", "wb"))
-    print(datetime.datetime.now()-start_time)
-
-
-def create_neural_network():
-  model = keras.Sequential()
-  model.add(keras.Input(shape=(VECTOR_SIZE)))
-
-def get_self_selected_words():
-    #change to lemmatized versions
-    return ["wife", "husband", "boyfriend", "girlfriend", "gay", "straight", "man", "woman", "boy", "girl", "birthday", "party", "nerd", "nerdy", "school", "college", "university", "friend", "love", "hate", "text", "instagram", "facebook", "snapchat", "work", "job", "fired", "divorce", "marry"]
-
+neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 50)
+# neural_network.modelTwo(training_set, validation_set, testing_set, 25)
 # do lemmatization for these models
 
 # Highest magnitude
