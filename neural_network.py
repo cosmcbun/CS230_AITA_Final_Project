@@ -45,8 +45,10 @@ def createNeuralNetwork(vector_size, nodes_per_layer):
 
 # tests by taking the average of all vectors in the body
 def modelOne(word2vec, training, validation, testing, nodes_per_layer):
+    print("MODEL ONE")
     training = balanceOutcomes(training)
-    validation = balanceOutcomes(validation)
+    # validation = balanceOutcomes(validation)
+    # testing = balanceOutcomes(testing)
 
     train_ds = postsToAverageVectors(training, word2vec)
     validation_ds = postsToAverageVectors(validation, word2vec)
@@ -61,23 +63,45 @@ def modelOne(word2vec, training, validation, testing, nodes_per_layer):
 
 # tests against specific identified words
 def modelTwo(training, validation, testing, nodes_per_layer):
+    print("MODEL TWO")
     training = balanceOutcomes(training)
-    validation = balanceOutcomes(validation)
 
+    # keywords = ["mom", "girlfriend", "mother", "dad", "edit"]
     keywords = get_self_selected_words()
     # keywords = get_select_selected_high_freq_words(training, 500)
 
     train_ds = postsToBooleans(training, keywords)
     validation_ds = postsToBooleans(validation, keywords)
-    # test_ds = postsToBooleans(testing, word2vec)
+    test_ds = postsToBooleans(testing, keywords)
     
     neural_net = createNeuralNetwork(len(keywords), nodes_per_layer)
 
     history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=50, validation_data = validation_ds)
-    print(history_basic_model.history)
+    eval = neural_net.evaluate(test_ds[0], test_ds[1])
+    print(eval)
+    # print(history_basic_model.history)
+
+# tests against highest magnitude words
+def modelThree(word2vec, training, validation, testing, nodes_per_layer):
+    print("MODEL THREE")
+    training = balanceOutcomes(training)
+
+    keywords = get_highest_magnitude_words(word2vec)
+
+    train_ds = postsToBooleans(training, keywords)
+    validation_ds = postsToBooleans(validation, keywords)
+    test_ds = postsToBooleans(testing, keywords)
+    
+    neural_net = createNeuralNetwork(len(keywords), nodes_per_layer)
+
+    history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=50, validation_data = validation_ds)
+    eval = neural_net.evaluate(test_ds[0], test_ds[1])
+    print(eval)
+    # print(history_basic_model.history)
 
 
 # assumes there are more NTA than YTA, and that posts are already randomly ordered
+# in the future, duplicate rather than delete
 def balanceOutcomes(posts):
     balanced_posts = []
     spare_yta_posts = []
@@ -116,3 +140,11 @@ def get_select_selected_high_freq_words(posts, threshold):
     for word in words_to_remove:
         all_words.remove(word)
     return all_words
+
+def word_to_magnitude(word, model):
+    return np.linalg.norm(model.wv[word])
+
+def get_highest_magnitude_words(model):
+    words = model.wv.index_to_key
+    words = sorted(words, key=lambda word: word_to_magnitude(word, model), reverse=True)
+    return words[0:100]

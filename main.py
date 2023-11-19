@@ -124,10 +124,6 @@ print("Model compilation complete")
 print(datetime.datetime.now() - start_time)
 
 neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 50)
-# neural_network.modelTwo(training_set, validation_set, testing_set, 25)
+# neural_network.modelTwo(training_set, validation_set, testing_set, 30)
+# neural_network.modelThree(word2Vec, training_set, validation_set, testing_set, 50)
 # do lemmatization for these models
-
-# Highest magnitude
-# Selected by us
-# Difference in frequency
-# Highest impacts words of certain frequency
