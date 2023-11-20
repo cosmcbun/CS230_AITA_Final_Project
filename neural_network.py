@@ -1,8 +1,15 @@
 from tensorflow import keras
+from tensorflow.python.ops import math_ops
+import tensorflow as tf
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.losses import BinaryCrossentropy
 from nltk.stem import WordNetLemmatizer
 import numpy as np
+
+import numpy as np
+import keras.backend as K
+
+# tf.config.run_functions_eagerly(True)
 
 def postsToAverageVectors(posts, model):
     inputs = np.ndarray((len(posts), 100))
@@ -25,6 +32,18 @@ def getAverageTokenVector(post, model):
     tokens = post.tokens
     vectors = np.asarray([(model.wv[word] if word in model.wv else np.zeros(100)) for word in tokens])
     return np.mean(vectors, axis=0)
+
+def normalizeVectors(sample, data):
+    average_vector = np.average(data, axis = 0)
+    std_vector = np.std(data, axis = 0)
+    # l = len(average_vector)
+    # average_vector = np.reshape(average_vector, (l,1))
+    # std_vector = np.reshape(std_vector, (l,1))
+    # print(sample.shape, average_vector.shape, std_vector.shape)
+    for i in range(sample.shape[0]): #wasnt working when i tried using np in one-line. oh well
+        sample[i] = (sample[i] - average_vector)/std_vector 
+    return sample
+    # return (sample - average_vector)/std_vector
 
 def createNeuralNetwork(vector_size, nodes_per_layer):
     model = keras.Sequential()
@@ -50,21 +69,32 @@ def modelOne(word2vec, training, validation, testing, nodes_per_layer):
     # validation = balanceOutcomes(validation)
     # testing = balanceOutcomes(testing)
 
-    train_ds = postsToAverageVectors(training, word2vec)
+    train_ds_original = postsToAverageVectors(training, word2vec)
     validation_ds = postsToAverageVectors(validation, word2vec)
     test_ds = postsToAverageVectors(testing, word2vec)
     
+    train_ds = (normalizeVectors(train_ds_original[0], train_ds_original[0]), train_ds_original[1])
+    validation_ds = (normalizeVectors(validation_ds[0], train_ds_original[0]), validation_ds[1])
+    test_ds = (normalizeVectors(test_ds[0], train_ds_original[0]), test_ds[1])
+    
     neural_net = createNeuralNetwork(100, nodes_per_layer)
 
-    history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=50, validation_data = validation_ds)
+    history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=2, validation_data = validation_ds)
     # print(history_basic_model.history)
     eval = neural_net.evaluate(test_ds[0], test_ds[1])
     print(eval)
+
+    # testing_y = [label.numpy() for _, label in test_ds.unbatch().take(-1)]
+    # newresults = model.predict_on_batch(test_ds)
+    results = np.argmax(neural_net.predict(test_ds[0]), axis=1)
+    cm = tf.math.confusion_matrix(test_ds[1], results)
+    print(cm)
 
 # tests against specific identified words
 def modelTwo(training, validation, testing, nodes_per_layer):
     print("MODEL TWO")
     training = balanceOutcomes(training)
+    validation = balanceOutcomes(validation)
 
     # keywords = ["mom", "girlfriend", "mother", "dad", "edit"]
     keywords = get_self_selected_words()
@@ -82,11 +112,11 @@ def modelTwo(training, validation, testing, nodes_per_layer):
     # print(history_basic_model.history)
 
 # tests against highest magnitude words
-def modelThree(word2vec, training, validation, testing, nodes_per_layer):
+def modelThree(word2vec, training, validation, testing, nodes_per_layer, num_words):
     print("MODEL THREE")
     training = balanceOutcomes(training)
 
-    keywords = get_highest_magnitude_words(word2vec)
+    keywords = get_highest_magnitude_words(word2vec, num_words)
 
     train_ds = postsToBooleans(training, keywords)
     validation_ds = postsToBooleans(validation, keywords)
@@ -94,9 +124,15 @@ def modelThree(word2vec, training, validation, testing, nodes_per_layer):
     
     neural_net = createNeuralNetwork(len(keywords), nodes_per_layer)
 
-    history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=50, validation_data = validation_ds)
+    history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=5, validation_data = validation_ds)
     eval = neural_net.evaluate(test_ds[0], test_ds[1])
     print(eval)
+
+    # testing_y = [label.numpy() for _, label in test_ds.unbatch().take(-1)]
+    # newresults = model.predict_on_batch(test_ds)
+    results = np.argmax(neural_net.predict(test_ds[0]), axis=1)
+    cm = tf.math.confusion_matrix(test_ds[1], results)
+    print(cm)
     # print(history_basic_model.history)
 
 
@@ -144,7 +180,7 @@ def get_select_selected_high_freq_words(posts, threshold):
 def word_to_magnitude(word, model):
     return np.linalg.norm(model.wv[word])
 
-def get_highest_magnitude_words(model):
+def get_highest_magnitude_words(model, num_words):
     words = model.wv.index_to_key
     words = sorted(words, key=lambda word: word_to_magnitude(word, model), reverse=True)
-    return words[0:100]
+    return words[0:num_words]

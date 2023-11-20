@@ -123,7 +123,8 @@ word2Vec = getWord2Vec(training_set)
 print("Model compilation complete")
 print(datetime.datetime.now() - start_time)
 
+# print(neural_network.get_highest_magnitude_words(word2Vec))
 neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 50)
 # neural_network.modelTwo(training_set, validation_set, testing_set, 30)
-# neural_network.modelThree(word2Vec, training_set, validation_set, testing_set, 50)
+neural_network.modelThree(word2Vec, training_set, validation_set, testing_set, 50, 5000)
 # do lemmatization for these models
