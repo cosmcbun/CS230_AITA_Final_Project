@@ -60,17 +60,11 @@ class Post:
         printable = set(string.ascii_letters)
         printable.add("'")
         printable.add(" ")
-        #print([w for w in self.allText.split()])
-        #print([w for w in ''.join(filter(lambda x: x in printable, self.allText)).split(" ")])
-        #print([w for w in nltk.tokenize.word_tokenize(''.join(filter(lambda x: x in printable, self.allText)))])
         lemmatizer = WordNetLemmatizer()
 
         for word in ''.join(filter(lambda x: x in printable, self.allText)).split(" "):
             if word and word not in stop_words and "www" not in word:
                 self.tokens.append(lemmatizer.lemmatize(word))
-        #print(self.tokens)
-        #print()
-
 
     def __repr__(self):
         return self.title
@@ -123,12 +117,6 @@ word2Vec = getWord2Vec(training_set)
 print("Model compilation complete")
 print(datetime.datetime.now() - start_time)
 
-# print(neural_network.get_highest_magnitude_words(word2Vec))
-# neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 50)
-# neural_network.modelTwo(training_set, validation_set, testing_set, 30)
-# neural_network.modelThree(word2Vec, training_set, validation_set, testing_set, 50, 5000)
-# do lemmatization for these models
-
 def tuneHyperparameters(word2Vec, training_set, validation_set, testing_set):
     nodes_per_layer = [10, 15, 50, 100]
     dropouts = [0.2, 0.4, 0.6]
@@ -143,8 +131,11 @@ def tuneHyperparameters(word2Vec, training_set, validation_set, testing_set):
     print(results)
     return(results)
 
-# ALL OF THE TRIALS:
+a = sum([1 if post.is_asshole else 0 for post in all_posts])
+print(a, len(all_posts))
 
+
+# ALL OF THE TRIALS:
 wordset1 = neural_network.get_self_selected_words()
 wordset2 = neural_network.get_highest_magnitude_words(word2Vec, 100)
 wordset3 = neural_network.get_highest_magnitude_words(word2Vec, 500)

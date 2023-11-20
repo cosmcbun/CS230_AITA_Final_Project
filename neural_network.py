@@ -1,5 +1,4 @@
 from tensorflow import keras
-from tensorflow.python.ops import math_ops
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.losses import BinaryCrossentropy
@@ -7,8 +6,6 @@ from imblearn.over_sampling import SMOTE
 from nltk.stem import WordNetLemmatizer
 import numpy as np
 import keras.backend as K
-
-# tf.config.run_functions_eagerly(True)
 
 def postsToAverageVectors(posts, model):
     inputs = np.ndarray((len(posts), 100))
