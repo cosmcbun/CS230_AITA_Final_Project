@@ -124,7 +124,34 @@ print("Model compilation complete")
 print(datetime.datetime.now() - start_time)
 
 # print(neural_network.get_highest_magnitude_words(word2Vec))
-neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 50)
+# neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 50)
 # neural_network.modelTwo(training_set, validation_set, testing_set, 30)
-neural_network.modelThree(word2Vec, training_set, validation_set, testing_set, 50, 5000)
+# neural_network.modelThree(word2Vec, training_set, validation_set, testing_set, 50, 5000)
 # do lemmatization for these models
+
+def tuneHyperparameters(word2Vec, training_set, validation_set, testing_set):
+    nodes_per_layer = [10, 15, 50, 100]
+    dropouts = [0.2, 0.4, 0.6]
+    balancing_technique = ["smote", "undersample"]
+    results = []
+    for n in nodes_per_layer:
+        for d in dropouts:
+            for b in balancing_technique:
+                acc = neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 50, n, d, b)
+                print("FINAL", n, d, b, acc)
+                results.append([n, d, b, acc])
+    print(results)
+    return(results)
+
+# ALL OF THE TRIALS:
+
+wordset1 = neural_network.get_self_selected_words()
+wordset2 = neural_network.get_highest_magnitude_words(word2Vec, 100)
+wordset3 = neural_network.get_highest_magnitude_words(word2Vec, 500)
+neural_network.modelTwoRevised(wordset1, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+neural_network.modelTwoRevised(wordset2, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+neural_network.modelTwoRevised(wordset3, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+
+# neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4, "none")
+# neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4, "undersample")
+# tuneHyperparameters(word2Vec, training_set, validation_set, testing_set)
