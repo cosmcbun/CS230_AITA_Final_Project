@@ -1,10 +1,8 @@
-from tensorflow import keras
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.losses import BinaryCrossentropy
 import pandas as pd
 import numpy as np
 import datetime, re
 import nltk
+import neural_network
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import warnings
@@ -62,17 +60,11 @@ class Post:
         printable = set(string.ascii_letters)
         printable.add("'")
         printable.add(" ")
-        #print([w for w in self.allText.split()])
-        #print([w for w in ''.join(filter(lambda x: x in printable, self.allText)).split(" ")])
-        #print([w for w in nltk.tokenize.word_tokenize(''.join(filter(lambda x: x in printable, self.allText)))])
         lemmatizer = WordNetLemmatizer()
 
         for word in ''.join(filter(lambda x: x in printable, self.allText)).split(" "):
             if word and word not in stop_words and "www" not in word:
                 self.tokens.append(lemmatizer.lemmatize(word))
-        #print(self.tokens)
-        #print()
-
 
     def __repr__(self):
         return self.title
@@ -90,35 +82,6 @@ def trainWord2Vec(posts):
 
     model = gensim.models.Word2Vec(tokenized_data, min_count=1, vector_size=100, window=5, sg=1)
     return model
-
-def getAverageTokenVector(post, model):
-    tokens = post.tokens
-    vectors = np.asarray([(model.wv[word] if word in model.wv else np.zeros(VECTOR_SIZE)) for word in tokens])
-    return np.mean(vectors, axis=0)
-
-def createNeuralNetwork():
-  model = keras.Sequential()
-  model.add(keras.Input(shape=(VECTOR_SIZE)))
-
-  # three dense layers
-  model.add(Dense(128, name = "layer1", activation="relu"))
-  model.add(Dense(128, name = "layer2", activation="relu"))
-
-  # add the output layer
-  model.add(Dense(1, name = "output_layer", activation="sigmoid"))
-
-  # let's set up the optimizer!
-  model.compile(optimizer = 'adam', loss = BinaryCrossentropy(), metrics=['accuracy'])
-
-  return model
-
-def postsToDataset(posts, model):
-    inputs = np.ndarray((len(posts), VECTOR_SIZE))
-    for i, post in enumerate(posts):
-        inputs[i] = getAverageTokenVector(post, model)
-    # inputs = np.array([getAverageTokenVector(post, model) for post in posts])
-    outputs = np.array([post.is_asshole for post in posts])
-    return inputs, outputs
 
 def getAllPosts():
     if os.path.isfile("posts.pickle"):
@@ -140,9 +103,6 @@ def getWord2Vec(word_set):
         pickle.dump(model, open("model.pickle", "wb"))
         return model
 
-#dylan you have to run this once
-nltk.download('stopwords')
-
 VECTOR_SIZE = 100
 
 start_time = datetime.datetime.now()
@@ -157,16 +117,32 @@ word2Vec = getWord2Vec(training_set)
 print("Model compilation complete")
 print(datetime.datetime.now() - start_time)
 
-"""neural_net = create_neural_network()
-print("created neural network!")
-train_ds = posts_to_dataset(training_set, model)
-validation_ds = posts_to_dataset(validation_set, model)
-test_ds = posts_to_dataset(testing_set, model)
+def tuneHyperparameters(word2Vec, training_set, validation_set, testing_set):
+    nodes_per_layer = [10, 15, 50, 100]
+    dropouts = [0.2, 0.4, 0.6]
+    balancing_technique = ["smote", "undersample"]
+    results = []
+    for n in nodes_per_layer:
+        for d in dropouts:
+            for b in balancing_technique:
+                acc = neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 50, n, d, b)
+                print("FINAL", n, d, b, acc)
+                results.append([n, d, b, acc])
+    print(results)
+    return(results)
 
-print("We got the sets!")
+a = sum([1 if post.is_asshole else 0 for post in all_posts])
+print(a, len(all_posts))
 
-history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs=25, validation_data = validation_ds)
-print(history_basic_model.history)
-# results = neural_net.evaluate(test_ds[0], test_ds[1])
-# print(len(results))
-# print("Test Loss:", results[0], "Test Accuracy:", results[1])"""
+
+# ALL OF THE TRIALS:
+wordset1 = neural_network.get_self_selected_words()
+wordset2 = neural_network.get_highest_magnitude_words(word2Vec, 100)
+wordset3 = neural_network.get_highest_magnitude_words(word2Vec, 500)
+neural_network.modelTwoRevised(wordset1, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+neural_network.modelTwoRevised(wordset2, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+neural_network.modelTwoRevised(wordset3, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+
+# neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4, "none")
+# neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4, "undersample")
+# tuneHyperparameters(word2Vec, training_set, validation_set, testing_set)
