@@ -1,5 +1,5 @@
 tempCodeRunnerFile.py
 aita_clean.csv
 posts.pickle
-model.pickle
+word2vec_model.pickle
 legacy_pickles

@@ -96,11 +96,11 @@ def getAllPosts():
         return all_posts
 
 def getWord2Vec(word_set):
-    if os.path.isfile("model.pickle"):
-        return pickle.load(open("model.pickle", "rb"))
+    if os.path.isfile("word2vec_model.pickle"):
+        return pickle.load(open("word2vec_model.pickle", "rb"))
     else:
         model = trainWord2Vec(word_set)
-        pickle.dump(model, open("model.pickle", "wb"))
+        pickle.dump(model, open("word2vec_model.pickle", "wb"))
         return model
 
 VECTOR_SIZE = 100
@@ -114,8 +114,8 @@ print("Post compilation complete")
 print(datetime.datetime.now()-start_time)
 
 word2Vec = getWord2Vec(training_set)
-print("Model compilation complete")
-print(datetime.datetime.now() - start_time)
+print("Word2vec model compilation complete")
+print(datetime.datetime.now()-start_time)
 
 def tuneHyperparameters(word2Vec, training_set, validation_set, testing_set):
     nodes_per_layer = [10, 15, 50, 100]
@@ -136,13 +136,13 @@ print(a, len(all_posts))
 
 
 # ALL OF THE TRIALS:
-wordset1 = neural_network.get_self_selected_words()
-wordset2 = neural_network.get_highest_magnitude_words(word2Vec, 100)
-wordset3 = neural_network.get_highest_magnitude_words(word2Vec, 500)
-neural_network.modelTwoRevised(wordset1, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
-neural_network.modelTwoRevised(wordset2, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
-neural_network.modelTwoRevised(wordset3, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+# wordset1 = neural_network.get_self_selected_words()
+# wordset2 = neural_network.get_highest_magnitude_words(word2Vec, 100)
+# wordset3 = neural_network.get_highest_magnitude_words(word2Vec, 500)
+# neural_network.modelTwoRevised(wordset1, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+# neural_network.modelTwoRevised(wordset2, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+# neural_network.modelTwoRevised(wordset3, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
 
-# neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4, "none")
+neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4)
 # neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4, "undersample")
 # tuneHyperparameters(word2Vec, training_set, validation_set, testing_set)
