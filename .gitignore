@@ -1,5 +1,6 @@
 tempCodeRunnerFile.py
 aita_clean.csv
-posts.pickle
-word2vec_model.pickle
+
+# Pickeled data - too large and insecure
+.pickle
 legacy_pickles
