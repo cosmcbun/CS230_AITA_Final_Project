@@ -63,11 +63,7 @@ def createNeuralNetwork(vector_size, nodes_per_layer = 50, dropout = 0.4):
     return model
 
 # tests by taking the average of all vectors in the body
-def modelOne(word2Vec, training, validation, testing, epochs = 200, nodes_per_layer = 50, dropout = 0.4, balancing = "undersample"):
-    print("MODEL ONE")
-    # training = balanceOutcomes(training)
-    # validation = balanceOutcomes(validation)
-    # testing = balanceOutcomes(testing)
+def createModelOneInstantiation(wantOtherModelData, word2Vec, training, validation, testing, epochs = 200, nodes_per_layer = 50, dropout = 0.4, balancing = "undersample"):
     if balancing == "undersample":
         training = balanceOutcomes(training)
 
@@ -77,12 +73,15 @@ def modelOne(word2Vec, training, validation, testing, epochs = 200, nodes_per_la
 
     if balancing == "smote":
         train_ds = smoteBalancing(train_ds)
-        
-    neural_net = createNeuralNetwork(100, nodes_per_layer, dropout)
-    neural_net.predict
-    #pickle.dump(neural_net, open("neural_network.pickle", "wb"))
 
+    neural_net = createNeuralNetwork(100, nodes_per_layer, dropout)
     history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs = epochs, validation_data = validation_ds)
+    if wantOtherModelData: return neural_net, history_basic_model, train_ds, validation_ds, test_ds
+    else: return neural_net
+
+def modelOne(word2Vec, training, validation, testing, epochs=200, nodes_per_layer=50, dropout=0.4, balancing="undersample"):
+    print("MODEL ONE")
+    neural_net, history_basic_model, train_ds, validation_ds, test_ds = createModelOneInstantiation(True, word2Vec, training, validation, testing, epochs, nodes_per_layer, dropout, balancing)
 
     print("TRAIN")
     custom_confusion_matrix(neural_net, train_ds)

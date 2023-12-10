@@ -117,11 +117,7 @@ def tuneHyperparameters(word2Vec, training_set, validation_set, testing_set):
     print(results)
     return(results)
 
-def get_percentile_values(list):
-    length = len(list)
-    return [list[i * (length-1) // 100] for i in range(101)]
-
-def get_ahole_values(posts, word2Vec, neural_network):
+def getAholeValues(posts, word2Vec, neural_network):
     avg_vecs = neural_network.postsToAverageVectors(posts, word2Vec)[0]
     ahole_vals = neural_network.predict(x=avg_vecs)[:,0]
     return ahole_vals
