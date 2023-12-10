@@ -3,4 +3,4 @@ aita_clean.csv
 
 # Pickeled data - too large and insecure
 *.pickle
-legacy_pickles
+legacy_pickles/

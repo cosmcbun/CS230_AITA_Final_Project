@@ -103,20 +103,6 @@ def getWord2Vec(word_set):
         pickle.dump(model, open("word2vec_model.pickle", "wb"))
         return model
 
-VECTOR_SIZE = 100
-
-start_time = datetime.datetime.now()
-all_posts = getAllPosts()
-training_set = all_posts[:80000]
-validation_set = all_posts[80000:90000]
-testing_set = all_posts[90000:]
-print("Post compilation complete")
-print(datetime.datetime.now()-start_time)
-
-word2Vec = getWord2Vec(training_set)
-print("Word2vec model compilation complete")
-print(datetime.datetime.now()-start_time)
-
 def tuneHyperparameters(word2Vec, training_set, validation_set, testing_set):
     nodes_per_layer = [10, 15, 50, 100]
     dropouts = [0.2, 0.4, 0.6]
@@ -131,18 +117,57 @@ def tuneHyperparameters(word2Vec, training_set, validation_set, testing_set):
     print(results)
     return(results)
 
-a = sum([1 if post.is_asshole else 0 for post in all_posts])
-print(a, len(all_posts))
+def get_percentile_values(list):
+    length = len(list)
+    return [list[i * (length-1) // 100] for i in range(101)]
+
+def get_ahole_values(posts, word2Vec, neural_network):
+    avg_vecs = neural_network.postsToAverageVectors(posts, word2Vec)[0]
+    ahole_vals = neural_network.predict(x=avg_vecs)[:,0]
+    return ahole_vals
+    #fun_vals = {posts[i]:ahole_vals[i] for i in range(len(posts))}
+    #posts.sort(key=lambda p: posts[p])
 
 
-# ALL OF THE TRIALS:
-# wordset1 = neural_network.get_self_selected_words()
-# wordset2 = neural_network.get_highest_magnitude_words(word2Vec, 100)
-# wordset3 = neural_network.get_highest_magnitude_words(word2Vec, 500)
-# neural_network.modelTwoRevised(wordset1, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
-# neural_network.modelTwoRevised(wordset2, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
-# neural_network.modelTwoRevised(wordset3, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+VECTOR_SIZE = 100
 
-neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4)
-# neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4, "undersample")
-# tuneHyperparameters(word2Vec, training_set, validation_set, testing_set)
+if __name__ == "__main__":
+    start_time = datetime.datetime.now()
+    all_posts = getAllPosts()
+    training_set = all_posts[:80000]
+    validation_set = all_posts[80000:90000]
+    testing_set = all_posts[90000:]
+    print("Post compilation complete")
+    print(datetime.datetime.now()-start_time)
+
+    word2Vec = getWord2Vec(training_set)
+    print("Word2vec model compilation complete")
+    print(datetime.datetime.now()-start_time)
+
+    #neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4)
+    #ahole_vals = get_ahole_values(all_posts, word2Vec, pickle.load(open("neural_network.pickle", "rb")))
+
+    fun_set = all_posts
+    #avg_vecs = neural_network.postsToAverageVectors(fun_set, word2Vec)[0]
+    #ahole_vals = network.predict(x=avg_vecs)[:,0]
+    ahole_vals = pickle.load(open("sorted_ahole_confidences.pickle", "rb"))
+    print(get_percentile_values(ahole_vals))
+
+
+
+    # with open("export_confidences_to_r.txt", "w") as file:
+    #     file.write("confidences\n")
+    #     for val in ahole_vals:
+    #         file.write(str(val)+"\n")
+
+    # ALL OF THE TRIALS:
+    # wordset1 = neural_network.get_self_selected_words()
+    # wordset2 = neural_network.get_highest_magnitude_words(word2Vec, 100)
+    # wordset3 = neural_network.get_highest_magnitude_words(word2Vec, 500)
+    # neural_network.modelTwoRevised(wordset1, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+    # neural_network.modelTwoRevised(wordset2, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+    # neural_network.modelTwoRevised(wordset3, training_set, validation_set, testing_set, 50, 100, 0.4, "undersample")
+
+    # neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4, "undersample")
+    # tuneHyperparameters(word2Vec, training_set, validation_set, testing_set)
+    print(datetime.datetime.now()-start_time)

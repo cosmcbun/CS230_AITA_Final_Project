@@ -6,6 +6,7 @@ from imblearn.over_sampling import SMOTE
 from nltk.stem import WordNetLemmatizer
 import numpy as np
 import keras.backend as K
+import pickle
 
 def postsToAverageVectors(posts, model):
     inputs = np.ndarray((len(posts), 100))
@@ -62,7 +63,7 @@ def createNeuralNetwork(vector_size, nodes_per_layer = 50, dropout = 0.4):
     return model
 
 # tests by taking the average of all vectors in the body
-def modelOne(word2vec, training, validation, testing, epochs = 200, nodes_per_layer = 50, dropout = 0.4, balancing = "undersample"):
+def modelOne(word2Vec, training, validation, testing, epochs = 200, nodes_per_layer = 50, dropout = 0.4, balancing = "undersample"):
     print("MODEL ONE")
     # training = balanceOutcomes(training)
     # validation = balanceOutcomes(validation)
@@ -70,14 +71,16 @@ def modelOne(word2vec, training, validation, testing, epochs = 200, nodes_per_la
     if balancing == "undersample":
         training = balanceOutcomes(training)
 
-    train_ds = postsToAverageVectors(training, word2vec)
-    validation_ds = postsToAverageVectors(validation, word2vec)
-    test_ds = postsToAverageVectors(testing, word2vec)
+    train_ds = postsToAverageVectors(training, word2Vec)
+    validation_ds = postsToAverageVectors(validation, word2Vec)
+    test_ds = postsToAverageVectors(testing, word2Vec)
 
     if balancing == "smote":
         train_ds = smoteBalancing(train_ds)
         
     neural_net = createNeuralNetwork(100, nodes_per_layer, dropout)
+    neural_net.predict
+    #pickle.dump(neural_net, open("neural_network.pickle", "wb"))
 
     history_basic_model = neural_net.fit(train_ds[0], train_ds[1], epochs = epochs, validation_data = validation_ds)
 
@@ -144,11 +147,11 @@ def modelTwo(training, validation, testing, nodes_per_layer):
     # print(history_basic_model.history)
 
 # tests against highest magnitude words
-def modelThree(word2vec, training, validation, testing, nodes_per_layer, num_words):
+def modelThree(word2Vec, training, validation, testing, nodes_per_layer, num_words):
     print("MODEL THREE")
     training = balanceOutcomes(training)
 
-    keywords = get_highest_magnitude_words(word2vec, num_words)
+    keywords = get_highest_magnitude_words(word2Vec, num_words)
 
     train_ds = postsToBooleans(training, keywords)
     validation_ds = postsToBooleans(validation, keywords)
@@ -265,5 +268,3 @@ def tune_weight_initialization(model, train_ds, vector_size, nodes_per_layer):
         model = createNeuralNetwork(vector_size, nodes_per_layer)
         return tune_weight_initialization(model, train_ds)
     return model
-
-get_self_selected_words()
