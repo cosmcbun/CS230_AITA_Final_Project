@@ -1,10 +1,11 @@
-from main import getAllPosts, getWord2Vec
-from neural_network import createModelOneInstantiation
-import os, pickle, datetime
+from main import getAllPosts, getWord2Vec, Post
+from neural_network import createModelOneInstantiation, getAverageTokenVector
+import os, pickle, datetime, time
+import numpy as np
 
-def getNeuralNetwork():
-    if os.path.isfile("neural_network.pickle"):
-        return pickle.load(open("neural_network.pickle", "rb"))
+def getNeuralNetworkAndWord2Vec():
+    if os.path.isfile("neural_network.pickle") and os.path.isfile("word2vec_model.pickle"):
+        return pickle.load(open("neural_network.pickle", "rb")), pickle.load(open("word2vec_model.pickle", "rb"))
     elif os.path.isfile("aita_clean.csv"):
         start_time = datetime.datetime.now()
         print("Alright, got the data. We will first read the data and save the resulting data structure.")
@@ -20,13 +21,17 @@ def getNeuralNetwork():
         neural_network = createModelOneInstantiation(False, word2Vec, training_set, validation_set, testing_set, 200,
                                                      100, 0.4, "undersample")
         pickle.dump(neural_network, open("neural_network.pickle", "wb"))
-        return neural_network
+        return neural_network, word2Vec
     else:
         print("It looks like this is the first time you've run this program on your computer. You'll first need the data set in the same directory, which can be found here: https://iterative.ai/blog/a-public-reddit-dataset#how-to-get-the-dataset")
         print("Note that this program may take a while to run for the first time, and will fill the directory up to around 1 gigabyte with cached data.")
         quit()
 
-    neural_network.modelOne(word2Vec, training_set, validation_set, testing_set, 200, 100, 0.4, "undersample")
+def solicitText():
+    print("Welcome to the AITA post-judging tool! You may now copy in the anecdote you might submit to Reddit.")
+    title = input("Please enter the title of your post (this can be blank): ")
+    body = input("Please enter the body text of your post: ")
+    return title, body
 
 def renderJudgment(ahole_val):
     HARDCODED_AHOLE_PERCENTILE_VALS = [0.4858675, 0.4973156, 0.4984976, 0.49924588, 0.49978673, 0.5002333, 0.50062394,
@@ -63,8 +68,14 @@ def renderJudgment(ahole_val):
                 print(f"Overall, you're in the {i}{numeral_ending} percentile for not-the-a-hole-ness in our data.")
                 break
 
-neural_network = getNeuralNetwork()
-solicit_text
-create_post_object
-ahole_val = evaluate_post_with_NN
-renderJudgment(ahole_val)
+neuralNetwork, word2Vec = getNeuralNetworkAndWord2Vec()  # needs testing for systems without pickle installed
+while True:
+    title, body = solicitText()
+    customPost = Post((None, time.time(), title, body, False, None, None, None, None))
+    tokenVector = getAverageTokenVector(customPost, word2Vec)
+    aholeVal = neuralNetwork.predict(np.array([tokenVector,]))[0]
+    print(aholeVal)
+    renderJudgment(aholeVal)
+    print()
+    if input("Press enter to try again, anything else to quit."):
+        quit()

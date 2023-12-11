@@ -5,8 +5,6 @@ from tensorflow.keras.losses import BinaryCrossentropy
 from imblearn.over_sampling import SMOTE
 from nltk.stem import WordNetLemmatizer
 import numpy as np
-import keras.backend as K
-import pickle
 
 def postsToAverageVectors(posts, model):
     inputs = np.ndarray((len(posts), 100))

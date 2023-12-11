@@ -147,7 +147,6 @@ if __name__ == "__main__":
     #avg_vecs = neural_network.postsToAverageVectors(fun_set, word2Vec)[0]
     #ahole_vals = network.predict(x=avg_vecs)[:,0]
     ahole_vals = pickle.load(open("sorted_ahole_confidences.pickle", "rb"))
-    print(get_percentile_values(ahole_vals))
 
 
 
